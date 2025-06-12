@@ -13,7 +13,7 @@ import { Tractor } from "lucide-react";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen w-full flex-col bg-muted/40">
+    <>
       <Sidebar side="left" variant="sidebar" collapsible="icon">
         <SidebarHeader className="border-b border-sidebar-border">
           <div className="flex items-center gap-2 p-2 h-14">
@@ -28,12 +28,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <SidebarNav />
         </SidebarContent>
       </Sidebar>
-      <div className="flex flex-col flex-1 transition-[padding] duration-200 ease-linear peer-data-[state=expanded]:sm:pl-[var(--sidebar-width)] peer-data-[state=collapsed]:peer-data-[collapsible=icon]:sm:pl-[var(--sidebar-width-icon)] peer-data-[collapsible=offcanvas]:sm:pl-0">
+      <div className="flex flex-col flex-1 h-screen overflow-hidden transition-[padding] duration-200 ease-linear peer-data-[state=expanded]:sm:pl-[var(--sidebar-width)] peer-data-[state=collapsed]:peer-data-[collapsible=icon]:sm:pl-[var(--sidebar-width-icon)] peer-data-[collapsible=offcanvas]:sm:pl-0">
          <Header />
         <SidebarInset className="flex-1 bg-background p-4 sm:px-6 sm:pb-6 sm:pt-[calc(theme(spacing.16)_+_theme(spacing.4))]">
             {children}
         </SidebarInset>
       </div>
-    </div>
+    </>
   );
 }
