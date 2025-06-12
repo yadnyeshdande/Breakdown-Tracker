@@ -10,7 +10,7 @@ export type SpareConsumption = {
 };
 
 export type BreakdownPost = {
-  id: string;
+  id: string; // Should map to MongoDB _id (string UUID)
   lossTime: number; // in minutes
   line: string;
   machine: string;
@@ -22,7 +22,7 @@ export type BreakdownPost = {
 };
 
 export type SparePart = {
-  id:string;
+  id:string; // Should map to MongoDB _id (string UUID)
   partNumber: string;
   description: string;
   quantity: number;
@@ -31,7 +31,7 @@ export type SparePart = {
   updatedAt: string; // ISO Date String
 };
 
-// For forms
+// For forms - input types should not contain DB-generated fields like id, createdAt, updatedAt
 export type BreakdownPostInput = Omit<BreakdownPost, 'id' | 'createdAt' | 'updatedAt' | 'sparesConsumed'> & {
   sparesConsumed: Array<{ sparePartId: string; quantityConsumed: number }>;
 };
