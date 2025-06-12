@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   Sidebar,
@@ -27,12 +28,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <SidebarNav />
         </SidebarContent>
       </Sidebar>
-      <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14 peer-data-[collapsible=icon]:sm:pl-14 peer-data-[collapsible=offcanvas]:sm:pl-0 transition-[padding] duration-200 ease-linear">
+      <div className="flex flex-col flex-1 transition-[padding] duration-200 ease-linear peer-data-[state=expanded]:sm:pl-[var(--sidebar-width)] peer-data-[state=collapsed]:peer-data-[collapsible=icon]:sm:pl-[var(--sidebar-width-icon)] peer-data-[collapsible=offcanvas]:sm:pl-0">
          <Header />
-        <SidebarInset>
-          <main className="flex-1 p-4 sm:px-6 sm:py-0 md:gap-8 bg-background">
+        <SidebarInset className="flex-1 bg-background p-4 sm:px-6 sm:pb-6 sm:pt-[calc(theme(spacing.16)_+_theme(spacing.4))]">
             {children}
-          </main>
         </SidebarInset>
       </div>
     </div>
