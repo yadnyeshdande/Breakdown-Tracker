@@ -142,4 +142,3 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 ## License
 
 This project is open-source and available under the [MIT License](LICENSE.md) (assuming one would be added).
-
