@@ -28,7 +28,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <SidebarNav />
         </SidebarContent>
       </Sidebar>
-      <div className="flex flex-col flex-1 h-screen overflow-hidden transition-[padding] duration-200 ease-linear peer-data-[state=expanded]:sm:pl-[var(--sidebar-width)] peer-data-[state=collapsed]:peer-data-[collapsible=icon]:sm:pl-[var(--sidebar-width-icon)] peer-data-[collapsible=offcanvas]:sm:pl-0">
+      <div className="flex flex-col flex-1 h-screen overflow-hidden">
          <Header />
         <SidebarInset className="flex-1 bg-background p-4 sm:px-6 sm:pb-6 sm:pt-[calc(theme(spacing.16)_+_theme(spacing.4))]">
             {children}
