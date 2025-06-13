@@ -161,7 +161,7 @@ export function BreakdownForm({ availableSpares }: BreakdownFormProps) {
               <FormItem>
                 <FormLabel>Line</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g., Production Line A" {...field} />
+                  <Input placeholder="e.g., P122, P141, PTCED, BTCL" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -174,7 +174,7 @@ export function BreakdownForm({ availableSpares }: BreakdownFormProps) {
               <FormItem>
                 <FormLabel>Machine</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g., CNC Mill X2000" {...field} />
+                  <Input placeholder="e.g., EMS,Robot" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
