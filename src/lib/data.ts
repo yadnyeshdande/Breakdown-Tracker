@@ -1,3 +1,4 @@
+
 import type { Collection, Db } from 'mongodb';
 import clientPromise from './mongodb';
 import type { BreakdownPost, SparePart, SparePartInput, BreakdownPostInput, SpareConsumption } from './types';
@@ -17,8 +18,8 @@ async function getDb() {
 }
 
 // Helper to map MongoDB document to our type (especially _id to id and date conversions)
-function mapMongoDocToSparePart(doc: any): SparePart {
-  if (!doc) return doc;
+function mapMongoDocToSparePart(doc: any): SparePart | null {
+  if (!doc) return null;
   const { _id, createdAt, updatedAt, ...rest } = doc;
   return {
     id: _id.toString(),
@@ -28,8 +29,8 @@ function mapMongoDocToSparePart(doc: any): SparePart {
   } as SparePart;
 }
 
-function mapMongoDocToBreakdownPost(doc: any): BreakdownPost {
-  if (!doc) return doc;
+function mapMongoDocToBreakdownPost(doc: any): BreakdownPost | null {
+  if (!doc) return null;
   const { _id, createdAt, updatedAt, ...rest } = doc;
   return {
     id: _id.toString(),
@@ -45,13 +46,14 @@ function mapMongoDocToBreakdownPost(doc: any): BreakdownPost {
 export async function getSpareParts(): Promise<SparePart[]> {
   await getDb();
   const sparesFromDb = await sparePartsCollection.find({}).sort({ createdAt: -1 }).toArray();
-  return sparesFromDb.map(mapMongoDocToSparePart);
+  return sparesFromDb.map(doc => mapMongoDocToSparePart(doc)!).filter(Boolean) as SparePart[];
 }
 
 export async function getSparePartById(id: string): Promise<SparePart | undefined> {
   await getDb();
   const spareFromDb = await sparePartsCollection.findOne({ _id: id as any }); // Use `id` as `_id`
-  return spareFromDb ? mapMongoDocToSparePart(spareFromDb) : undefined;
+  const mappedSpare = mapMongoDocToSparePart(spareFromDb);
+  return mappedSpare || undefined;
 }
 
 export async function addSparePart(sparePartInput: SparePartInput): Promise<SparePart> {
@@ -65,23 +67,24 @@ export async function addSparePart(sparePartInput: SparePartInput): Promise<Spar
     updatedAt: now,
   };
   await sparePartsCollection.insertOne(newSparePartDoc as any);
-  return mapMongoDocToSparePart(newSparePartDoc); // Return the mapped object
+  return mapMongoDocToSparePart(newSparePartDoc) as SparePart; // Return the mapped object
 }
 
-export async function updateSparePart(id: string, updates: Partial<Omit<SparePartInput, 'createdAt' | 'updatedAt'>> & { quantity?: number }): Promise<SparePart | undefined> {
+export async function updateSparePart(id: string, updates: Partial<Omit<SparePartInput, 'createdAt' | 'updatedAt' | 'partNumber' | 'description' | 'location'>> & { quantity?: number, partNumber?: string, description?: string, location?: string }): Promise<SparePart | undefined> {
   await getDb();
-  const updateDoc = {
-    $set: {
-      ...updates,
-      updatedAt: new Date(),
-    },
-  };
+  const updateDoc: any = { $set: { updatedAt: new Date() } };
+  if (updates.partNumber !== undefined) updateDoc.$set.partNumber = updates.partNumber;
+  if (updates.description !== undefined) updateDoc.$set.description = updates.description;
+  if (updates.quantity !== undefined) updateDoc.$set.quantity = updates.quantity;
+  if (updates.location !== undefined) updateDoc.$set.location = updates.location;
+  
   const result = await sparePartsCollection.findOneAndUpdate(
     { _id: id as any },
     updateDoc,
     { returnDocument: 'after' }
   );
-  return result ? mapMongoDocToSparePart(result) : undefined;
+  const mappedResult = result ? mapMongoDocToSparePart(result) : undefined;
+  return mappedResult || undefined;
 }
 
 export async function deleteSparePart(id: string): Promise<boolean> {
@@ -95,13 +98,14 @@ export async function deleteSparePart(id: string): Promise<boolean> {
 export async function getBreakdownPosts(): Promise<BreakdownPost[]> {
   await getDb();
   const breakdownsFromDb = await breakdownsCollection.find({}).sort({ createdAt: -1 }).toArray();
-  return breakdownsFromDb.map(mapMongoDocToBreakdownPost);
+  return breakdownsFromDb.map(doc => mapMongoDocToBreakdownPost(doc)!).filter(Boolean) as BreakdownPost[];
 }
 
 export async function getBreakdownPostById(id: string): Promise<BreakdownPost | undefined> {
   await getDb();
   const breakdownFromDb = await breakdownsCollection.findOne({ _id: id as any });
-  return breakdownFromDb ? mapMongoDocToBreakdownPost(breakdownFromDb) : undefined;
+  const mappedBreakdown = mapMongoDocToBreakdownPost(breakdownFromDb);
+  return mappedBreakdown || undefined;
 }
 
 export async function addBreakdownPost(breakdownInput: BreakdownPostInput): Promise<BreakdownPost> {
@@ -111,7 +115,7 @@ export async function addBreakdownPost(breakdownInput: BreakdownPostInput): Prom
   const detailedSparesConsumed: SpareConsumption[] = [];
   if (breakdownInput.sparesConsumed && breakdownInput.sparesConsumed.length > 0) {
     for (const consumed of breakdownInput.sparesConsumed) {
-      const spare = await getSparePartById(consumed.sparePartId); // This now hits MongoDB
+      const spare = await getSparePartById(consumed.sparePartId); 
       if (spare) {
         detailedSparesConsumed.push({
           sparePartId: spare.id,
@@ -121,24 +125,29 @@ export async function addBreakdownPost(breakdownInput: BreakdownPostInput): Prom
         });
       } else {
         console.warn(`Spare part with id ${consumed.sparePartId} not found during breakdown creation.`);
-        // Potentially throw an error here or handle as per business logic
       }
     }
   }
   
   const newBreakdownId = crypto.randomUUID();
   const newBreakdownPostDoc = {
-    _id: newBreakdownId, // Use generated UUID as _id
+    _id: newBreakdownId, 
     lossTime: breakdownInput.lossTime,
     line: breakdownInput.line,
     machine: breakdownInput.machine,
     description: breakdownInput.description,
     category: breakdownInput.category,
-    sparesConsumed: detailedSparesConsumed, // Store the detailed, denormalized list
+    sparesConsumed: detailedSparesConsumed, 
     createdAt: now,
     updatedAt: now,
   };
 
   await breakdownsCollection.insertOne(newBreakdownPostDoc as any);
-  return mapMongoDocToBreakdownPost(newBreakdownPostDoc);
+  return mapMongoDocToBreakdownPost(newBreakdownPostDoc) as BreakdownPost;
+}
+
+export async function deleteBreakdownPost(id: string): Promise<boolean> {
+  await getDb();
+  const result = await breakdownsCollection.deleteOne({ _id: id as any });
+  return result.deletedCount === 1;
 }

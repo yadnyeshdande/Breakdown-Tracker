@@ -10,7 +10,7 @@ import { ScrollArea } from '../ui/scroll-area';
 
 interface MtbfSectionProps {
   breakdowns: BreakdownPost[];
-  allMachines: string[];
+  allMachines: string[]; // Expects already trimmed and unique machine names
 }
 
 export function MtbfSection({ breakdowns, allMachines }: MtbfSectionProps) {
@@ -20,31 +20,46 @@ export function MtbfSection({ breakdowns, allMachines }: MtbfSectionProps) {
     if (selectedMachines.length === 0) return [];
 
     return selectedMachines.map(machineName => {
+      // machineName from selectedMachines is already trimmed
       const machineBreakdowns = breakdowns
-        .filter(b => b.machine === machineName)
+        .filter(b => b.machine.trim() === machineName)
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-      if (machineBreakdowns.length < 1) { // Or < 2 for MTBF between failures
+      if (machineBreakdowns.length < 1) {
         return { machine: machineName, mtbf: null, operatingTime: 0, failures: 0 };
       }
 
       const numFailures = machineBreakdowns.length;
+      
+      // Estimate total observed period: from first failure start to last repair end.
+      // This is a simplification. A more accurate MTBF often needs defined operational periods.
       const firstFailureTime = new Date(machineBreakdowns[0].createdAt).getTime();
       const lastBreakdown = machineBreakdowns[numFailures - 1];
+      // Consider the end of the last repair as the end of the observation for that repair cycle
       const endOfLastRepairTime = new Date(lastBreakdown.createdAt).getTime() + (lastBreakdown.lossTime * 60000);
       
+      // Total period from the start of the first failure to the end of the last repair
       const totalObservedPeriodMs = endOfLastRepairTime - firstFailureTime;
       
       const totalDowntimeMs = machineBreakdowns.reduce((sum, b) => sum + b.lossTime * 60000, 0);
       
       let effectiveOperatingTimeMs = totalObservedPeriodMs - totalDowntimeMs;
-      if (effectiveOperatingTimeMs < 0) effectiveOperatingTimeMs = 0; // Cannot be negative
+
+      // If only one failure, effective operating time might be negative or zero if observed period is just the downtime.
+      // MTBF is typically calculated over a longer operational period with multiple failures.
+      // For a single failure, MTBF is often considered "infinite" until the next failure or not calculated.
+      // Let's adjust to ensure operating time is not negative.
+      if (effectiveOperatingTimeMs < 0) effectiveOperatingTimeMs = 0; 
 
       // MTBF = Total Operating Time / Number of Failures
-      // If numFailures is 0, mtbf is undefined. If 1, this can be very large if operating time is since install.
-      // For this simple calculation, if only 1 failure, "totalObservedPeriodMs" would be just its loss time,
-      // making operating time 0. Let's define MTBF for >= 1 failure.
-      const mtbfInMinutes = numFailures > 0 ? (effectiveOperatingTimeMs / 60000) / numFailures : null;
+      // If numFailures = 1, this can give a value, but it's uptime before that single failure (if known) or since observation started.
+      // If using numFailures (for >1 failures, it's usually numFailures - 1 intervals, or total op time / numFailures)
+      // Let's use total effective operating time / number of failures.
+      const mtbfInMinutes = numFailures > 0 && effectiveOperatingTimeMs > 0 ? (effectiveOperatingTimeMs / 60000) / numFailures : null;
+      // If there's only one failure, MTBF is technically undefined or very large.
+      // If numFailures is 1, it means operating time until that one failure.
+      // The current calculation can result in 0 or small MTBF if only one failure exists and observation period is short.
+
 
       return { 
         machine: machineName, 
@@ -75,7 +90,9 @@ export function MtbfSection({ breakdowns, allMachines }: MtbfSectionProps) {
           <CardHeader>
             <CardTitle>MTBF Results</CardTitle>
             <CardDescription>
-              MTBF is shown in minutes. Higher values are better. Calculated based on time from first failure to end of last repair.
+              MTBF (Mean Time Between Failures) is shown in minutes. Higher values are better. 
+              Calculated based on total effective operating time divided by the number of failures.
+              Operating time is estimated from the first failure to the end of the last repair, minus total downtime.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -96,7 +113,7 @@ export function MtbfSection({ breakdowns, allMachines }: MtbfSectionProps) {
                       <TableCell className="text-right">{data.failures}</TableCell>
                       <TableCell className="text-right">{data.operatingTime.toFixed(0)}</TableCell>
                       <TableCell className="text-right font-semibold">
-                        {data.mtbf !== null ? data.mtbf.toFixed(2) : 'N/A'}
+                        {data.mtbf !== null ? data.mtbf.toFixed(2) : 'N/A (needs >0 op. time & failures)'}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -106,7 +123,7 @@ export function MtbfSection({ breakdowns, allMachines }: MtbfSectionProps) {
           </CardContent>
         </Card>
       )}
-      {selectedMachines.length > 0 && mtbfData.length === 0 && (
+      {selectedMachines.length > 0 && mtbfData.filter(d => d.failures > 0).length === 0 && (
          <p className="text-muted-foreground text-center py-4">
           No breakdown data available for the selected machines to calculate MTBF.
         </p>

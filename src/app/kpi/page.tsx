@@ -20,7 +20,8 @@ export const metadata = {
 export default async function KpiPage() {
   const breakdowns = await getBreakdownPosts();
 
-  const allMachines = Array.from(new Set(breakdowns.map(b => b.machine))).sort();
+  // Normalize machine names (trim whitespace) and get unique, sorted list. Filter out empty strings.
+  const allMachines = Array.from(new Set(breakdowns.map(b => b.machine.trim()))).filter(m => m).sort();
 
   return (
     <AppLayout>

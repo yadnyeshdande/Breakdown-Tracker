@@ -1,10 +1,20 @@
+
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { addBreakdownPost, addSparePart, deleteSparePart, getSparePartById, updateSparePart } from "./data"; // Will use MongoDB versions
+import { 
+  addBreakdownPost, 
+  addSparePart, 
+  deleteSparePart, 
+  getSparePartById, 
+  updateSparePart,
+  getBreakdownPostById,
+  deleteBreakdownPost
+} from "./data"; 
 import type { BreakdownPostInput, SparePartInput } from "./types";
 import { breakdownCategories } from "./types";
+import { redirect } from 'next/navigation';
 
 const sparePartSchema = z.object({
   partNumber: z.string().min(1, "Part number is required"),
@@ -31,7 +41,7 @@ export async function createSparePartAction(formData: FormData) {
   try {
     await addSparePart(validatedFields.data as SparePartInput);
     revalidatePath("/inventory");
-    revalidatePath("/breakdowns/create"); // Revalidate create breakdown page to update spare list
+    revalidatePath("/breakdowns/create"); 
     return { message: "Spare part created successfully." };
   } catch (error) {
     console.error("CreateSparePartAction Error:", error);
@@ -91,7 +101,7 @@ const breakdownPostSchema = z.object({
   category: z.enum(breakdownCategories, {
     errorMap: () => ({ message: "Invalid category selected." }),
   }),
-  sparesConsumed: z.string().optional(), // JSON string of [{ sparePartId: string, quantityConsumed: number }]
+  sparesConsumed: z.string().optional(), 
 });
 
 export async function createBreakdownPostAction(formData: FormData) {
@@ -117,7 +127,6 @@ export async function createBreakdownPostAction(formData: FormData) {
     machine: formData.get("machine"),
     description: formData.get("description"),
     category: formData.get("category"),
-    // sparesConsumed is handled separately as it's JSON string
   });
 
   if (!validatedFields.success) {
@@ -129,11 +138,10 @@ export async function createBreakdownPostAction(formData: FormData) {
   
   const breakdownInput: BreakdownPostInput = {
     ...validatedFields.data,
-    sparesConsumed: parsedSpares, // Use the parsed array
+    sparesConsumed: parsedSpares, 
   };
 
   try {
-    // Reduce spare quantities
     if (breakdownInput.sparesConsumed && breakdownInput.sparesConsumed.length > 0) {
         for (const consumed of breakdownInput.sparesConsumed) {
           const spare = await getSparePartById(consumed.sparePartId);
@@ -145,7 +153,6 @@ export async function createBreakdownPostAction(formData: FormData) {
                 message: "Inventory error: Insufficient stock.",
               };
             }
-            // Update only the quantity
             const updateResult = await updateSparePart(spare.id, { quantity: newQuantity });
             if (!updateResult) {
                  return {
@@ -164,13 +171,130 @@ export async function createBreakdownPostAction(formData: FormData) {
 
     await addBreakdownPost(breakdownInput);
     revalidatePath("/breakdowns");
-    revalidatePath("/inventory"); // Revalidate inventory due to stock changes
+    revalidatePath("/inventory"); 
     revalidatePath("/dashboard");
-    revalidatePath("/breakdowns/create"); // Revalidate to reflect stock changes in the form
+    revalidatePath("/kpi");
+    revalidatePath("/breakdowns/create"); 
     return { message: "Breakdown post created successfully." };
   } catch (error) {
     console.error("CreateBreakdownPostAction Error:", error);
-    // Check if it's a known error type from Zod or DB if more specific handling is needed
     return { message: "Database Error: Failed to create breakdown post." };
   }
+}
+
+export async function deleteBreakdownPostAction(breakdownId: string) {
+  try {
+    const breakdownToDelete = await getBreakdownPostById(breakdownId);
+    if (!breakdownToDelete) {
+      return { success: false, message: "Breakdown post not found." };
+    }
+
+    // Return consumed spares to inventory
+    if (breakdownToDelete.sparesConsumed && breakdownToDelete.sparesConsumed.length > 0) {
+      for (const consumed of breakdownToDelete.sparesConsumed) {
+        const spare = await getSparePartById(consumed.sparePartId);
+        if (spare) {
+          const newQuantity = spare.quantity + consumed.quantityConsumed;
+          await updateSparePart(spare.id, { quantity: newQuantity });
+        } else {
+          console.warn(`While deleting breakdown ${breakdownId}, tried to return spare ${consumed.sparePartId} which was not found.`);
+        }
+      }
+    }
+
+    const success = await deleteBreakdownPost(breakdownId);
+    if (!success) {
+      return { success: false, message: "Database Error: Failed to delete breakdown post." };
+    }
+
+    revalidatePath("/breakdowns");
+    revalidatePath("/inventory");
+    revalidatePath("/dashboard");
+    revalidatePath("/kpi");
+    // No direct revalidate for /breakdowns/[id] as it will be gone.
+  } catch (error) {
+    console.error("DeleteBreakdownPostAction Error:", error);
+    return { success: false, message: "An unexpected error occurred while deleting the breakdown post." };
+  }
+  // Redirect after successful deletion (or if post not found initially for deletion)
+  // This needs to be handled by the calling component or by throwing redirect error
+  // For actions, redirecting directly is preferred.
+  redirect('/breakdowns'); 
+  //The return below will not be reached due to redirect, but good for type consistency if redirect was conditional
+  // return { success: true, message: "Breakdown post deleted successfully." }; 
+}
+
+
+// Simplified Auth Actions (No real security, for trial only)
+const UserSchema = z.object({
+  email: z.string().email("Invalid email address."),
+  password: z.string().min(1, "Password is required."), // No real complexity check for trial
+  fullName: z.string().min(1, "Full name is required.").optional(),
+});
+
+let users: Array<Omit<UserInput, 'password'> & {id: string, passwordHash: string}> = []; // In-memory store, no hashing for trial
+let simpleUsers: Array<UserInput & {id: string}> = []; // Stores plain password for trial
+
+async function findUserByEmail(email: string): Promise<(UserInput & {id: string}) | undefined> {
+  // In a real app, this would query a database
+  return simpleUsers.find(user => user.email === email);
+}
+
+async function createUser(userInput: UserInput): Promise<UserInput & {id: string}> {
+  // In a real app, this would insert into a database and hash the password
+  const newUser = { ...userInput, id: crypto.randomUUID() };
+  simpleUsers.push(newUser);
+  return newUser;
+}
+
+
+export async function simpleSignUpAction(formData: FormData) {
+  const validatedFields = UserSchema.safeParse({
+    email: formData.get('email'),
+    password: formData.get('password'),
+    fullName: formData.get('fullName'),
+  });
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'Validation failed.',
+      success: false,
+    };
+  }
+
+  const { email, password, fullName } = validatedFields.data;
+  const existingUser = await findUserByEmail(email);
+
+  if (existingUser) {
+    return { errors: { email: ['Email already in use.'] }, message: 'User already exists.', success: false };
+  }
+
+  await createUser({ email, password, fullName });
+  return { message: 'Sign up successful! You can now log in.', success: true };
+}
+
+export async function simpleLoginAction(formData: FormData) {
+  const validatedFields = UserSchema.pick({ email: true, password: true }).safeParse({
+    email: formData.get('email'),
+    password: formData.get('password'),
+  });
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'Validation failed.',
+      success: false,
+      userEmail: null,
+    };
+  }
+
+  const { email, password } = validatedFields.data;
+  const user = await findUserByEmail(email);
+
+  if (!user || user.password !== password) { // Plain text comparison for trial
+    return { message: 'Invalid email or password.', success: false, userEmail: null };
+  }
+
+  return { message: 'Login successful!', success: true, userEmail: user.email };
 }
