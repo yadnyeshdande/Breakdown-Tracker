@@ -29,9 +29,9 @@ export default async function KpiPage() {
 
         <Tabs defaultValue="mttr" className="w-full">
           <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
-            <TabsTrigger value="mttr">MTTR Analysis</TabsTrigger>
-            <TabsTrigger value="mtbf">MTBF Analysis</TabsTrigger>
-            <TabsTrigger value="pareto">Pareto Analysis</TabsTrigger>
+            <TabsTrigger value="mttr" className="w-full">MTTR Analysis</TabsTrigger>
+            <TabsTrigger value="mtbf" className="w-full">MTBF Analysis</TabsTrigger>
+            <TabsTrigger value="pareto" className="w-full">Pareto Analysis</TabsTrigger>
           </TabsList>
           <TabsContent value="mttr">
             <Card className="shadow-lg">
