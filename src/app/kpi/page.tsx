@@ -28,7 +28,7 @@ export default async function KpiPage() {
         <h1 className="text-3xl font-headline text-primary">KPI Dashboard</h1>
 
         <Tabs defaultValue="mttr" className="w-full">
-          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
+          <TabsList className="grid w-full grid-cols-1 md:grid-cols-3">
             <TabsTrigger value="mttr" className="w-full">MTTR Analysis</TabsTrigger>
             <TabsTrigger value="mtbf" className="w-full">MTBF Analysis</TabsTrigger>
             <TabsTrigger value="pareto" className="w-full">Pareto Analysis</TabsTrigger>
