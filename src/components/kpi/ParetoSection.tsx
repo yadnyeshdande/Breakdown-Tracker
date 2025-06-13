@@ -7,6 +7,7 @@ import { MachineSelector } from './MachineSelector';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { ChartConfig } from '@/components/ui/chart';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 interface ParetoSectionProps {
@@ -70,26 +71,30 @@ export function ParetoSection({ breakdowns, allMachines }: ParetoSectionProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={paretoData} margin={{ top: 5, right: 20, left: 0, bottom: 50 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                    dataKey="name" 
-                    angle={-45} 
-                    textAnchor="end" 
-                    height={60} 
-                    interval={0}
-                    tick={{ fontSize: 12 }} 
-                />
-                <YAxis label={{ value: 'Total Loss Time (mins)', angle: -90, position: 'insideLeft', style: {textAnchor: 'middle', fontSize: '14px'}, dy: 40 }} />
-                <Tooltip
-                    contentStyle={{backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)'}}
-                    labelStyle={{color: 'hsl(var(--foreground))', fontWeight: 'bold'}}
-                />
-                <Legend wrapperStyle={{paddingTop: '20px'}} />
-                <Bar dataKey="totalLossTime" fill={chartConfig.totalLossTime.color} radius={[4, 4, 0, 0]} name="Total Loss Time (mins)" />
-              </BarChart>
-            </ResponsiveContainer>
+            <ScrollArea className="w-full">
+              <div style={{ width: paretoData.length > 5 ? `${paretoData.length * 60}px` : '100%', minWidth: '300px' }}> 
+                <ResponsiveContainer width="100%" height={350}>
+                  <BarChart data={paretoData} margin={{ top: 5, right: 20, left: 0, bottom: 50 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                        dataKey="name" 
+                        angle={-45} 
+                        textAnchor="end" 
+                        height={60} 
+                        interval={0}
+                        tick={{ fontSize: 12 }} 
+                    />
+                    <YAxis label={{ value: 'Total Loss Time (mins)', angle: -90, position: 'insideLeft', style: {textAnchor: 'middle', fontSize: '14px'}, dy: 40 }} />
+                    <Tooltip
+                        contentStyle={{backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)'}}
+                        labelStyle={{color: 'hsl(var(--foreground))', fontWeight: 'bold'}}
+                    />
+                    <Legend wrapperStyle={{paddingTop: '20px'}} />
+                    <Bar dataKey="totalLossTime" fill={chartConfig.totalLossTime.color} radius={[4, 4, 0, 0]} name="Total Loss Time (mins)" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </ScrollArea>
           </CardContent>
         </Card>
       )}
