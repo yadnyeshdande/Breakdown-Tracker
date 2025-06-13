@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -8,12 +9,13 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { ClipboardList, Archive, LayoutDashboard } from "lucide-react";
+import { ClipboardList, Archive, LayoutDashboard, TrendingUp } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/breakdowns", label: "Breakdowns", icon: ClipboardList },
   { href: "/inventory", label: "Inventory", icon: Archive },
+  { href: "/kpi", label: "KPI Dashboard", icon: TrendingUp },
 ];
 
 export function SidebarNav() {

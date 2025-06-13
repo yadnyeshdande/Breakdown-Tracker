@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { addBreakdownPost, addSparePart, deleteSparePart, getSparePartById, updateSparePart } from "./data";
+import { addBreakdownPost, addSparePart, deleteSparePart, getSparePartById, updateSparePart } from "./data"; // Will use MongoDB versions
 import type { BreakdownPostInput, SparePartInput } from "./types";
 import { breakdownCategories } from "./types";
 
@@ -24,7 +24,7 @@ export async function createSparePartAction(formData: FormData) {
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
-      message: "Failed to create spare part.",
+      message: "Failed to create spare part. Validation errors.",
     };
   }
 
@@ -34,6 +34,7 @@ export async function createSparePartAction(formData: FormData) {
     revalidatePath("/breakdowns/create"); // Revalidate create breakdown page to update spare list
     return { message: "Spare part created successfully." };
   } catch (error) {
+    console.error("CreateSparePartAction Error:", error);
     return { message: "Database Error: Failed to create spare part." };
   }
 }
@@ -49,27 +50,35 @@ export async function updateSparePartAction(id: string, formData: FormData) {
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
-      message: "Failed to update spare part.",
+      message: "Failed to update spare part. Validation errors.",
     };
   }
 
   try {
-    await updateSparePart(id, validatedFields.data as SparePartInput);
+    const result = await updateSparePart(id, validatedFields.data as SparePartInput);
+    if (!result) {
+        return { message: "Database Error: Failed to update spare part. Part not found or update failed." };
+    }
     revalidatePath("/inventory");
     revalidatePath("/breakdowns/create");
     return { message: "Spare part updated successfully." };
   } catch (error) {
+    console.error("UpdateSparePartAction Error:", error);
     return { message: "Database Error: Failed to update spare part." };
   }
 }
 
 export async function deleteSparePartAction(id: string) {
   try {
-    await deleteSparePart(id);
+    const success = await deleteSparePart(id);
+     if (!success) {
+        return { message: "Database Error: Failed to delete spare part. Part not found or delete failed." };
+    }
     revalidatePath("/inventory");
     revalidatePath("/breakdowns/create");
     return { message: "Spare part deleted successfully." };
   } catch (error) {
+    console.error("DeleteSparePartAction Error:", error);
     return { message: "Database Error: Failed to delete spare part." };
   }
 }
@@ -97,7 +106,7 @@ export async function createBreakdownPostAction(formData: FormData) {
     } catch (error) {
       return {
         errors: { sparesConsumed: ["Invalid format for consumed spares."] },
-        message: "Failed to create breakdown post.",
+        message: "Failed to create breakdown post due to spares format.",
       };
     }
   }
@@ -108,48 +117,60 @@ export async function createBreakdownPostAction(formData: FormData) {
     machine: formData.get("machine"),
     description: formData.get("description"),
     category: formData.get("category"),
+    // sparesConsumed is handled separately as it's JSON string
   });
 
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
-      message: "Failed to create breakdown post.",
+      message: "Failed to create breakdown post. Validation errors.",
     };
   }
   
   const breakdownInput: BreakdownPostInput = {
     ...validatedFields.data,
-    sparesConsumed: parsedSpares,
+    sparesConsumed: parsedSpares, // Use the parsed array
   };
 
   try {
     // Reduce spare quantities
-    for (const consumed of breakdownInput.sparesConsumed) {
-      const spare = await getSparePartById(consumed.sparePartId);
-      if (spare) {
-        const newQuantity = spare.quantity - consumed.quantityConsumed;
-        if (newQuantity < 0) {
-          return {
-            errors: { sparesConsumed: [`Not enough stock for spare part ${spare.partNumber}. Available: ${spare.quantity}, Consumed: ${consumed.quantityConsumed}`] },
-            message: "Inventory error.",
-          };
+    if (breakdownInput.sparesConsumed && breakdownInput.sparesConsumed.length > 0) {
+        for (const consumed of breakdownInput.sparesConsumed) {
+          const spare = await getSparePartById(consumed.sparePartId);
+          if (spare) {
+            const newQuantity = spare.quantity - consumed.quantityConsumed;
+            if (newQuantity < 0) {
+              return {
+                errors: { sparesConsumed: [`Not enough stock for spare part ${spare.partNumber}. Available: ${spare.quantity}, Consumed: ${consumed.quantityConsumed}`] },
+                message: "Inventory error: Insufficient stock.",
+              };
+            }
+            // Update only the quantity
+            const updateResult = await updateSparePart(spare.id, { quantity: newQuantity });
+            if (!updateResult) {
+                 return {
+                    errors: { sparesConsumed: [`Failed to update stock for spare part ${spare.partNumber}.`] },
+                    message: "Inventory error: Failed to update stock.",
+                 };
+            }
+          } else {
+             return {
+                errors: { sparesConsumed: [`Spare part with ID ${consumed.sparePartId} not found.`] },
+                message: "Inventory error: Spare part not found.",
+              };
+          }
         }
-        await updateSparePart(spare.id, { quantity: newQuantity });
-      } else {
-         return {
-            errors: { sparesConsumed: [`Spare part with ID ${consumed.sparePartId} not found.`] },
-            message: "Inventory error.",
-          };
-      }
     }
 
     await addBreakdownPost(breakdownInput);
     revalidatePath("/breakdowns");
     revalidatePath("/inventory"); // Revalidate inventory due to stock changes
     revalidatePath("/dashboard");
+    revalidatePath("/breakdowns/create"); // Revalidate to reflect stock changes in the form
     return { message: "Breakdown post created successfully." };
   } catch (error) {
-    console.error(error);
+    console.error("CreateBreakdownPostAction Error:", error);
+    // Check if it's a known error type from Zod or DB if more specific handling is needed
     return { message: "Database Error: Failed to create breakdown post." };
   }
 }

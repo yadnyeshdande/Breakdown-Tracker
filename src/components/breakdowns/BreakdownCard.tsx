@@ -25,7 +25,7 @@ export function BreakdownCard({ breakdown }: BreakdownCardProps) {
     <Card className="flex flex-col h-full shadow-md hover:shadow-lg transition-shadow duration-200">
       <CardHeader>
         <div className="flex justify-between items-start">
-            <CardTitle className="text-lg font-semibold text-primary mb-1 leading-tight">{breakdown.machine} on {breakdown.line}</CardTitle>
+            <CardTitle className="text-lg font-semibold text-primary mb-1 leading-tight">{breakdown.machine} at {breakdown.line}</CardTitle>
             <Badge variant={breakdown.category === 'Electrical' ? 'destructive' : (breakdown.category === 'Mechanical' ? 'default' : 'secondary')} className="capitalize whitespace-nowrap">
                 {getCategoryIcon(breakdown.category)}
                 <span className="ml-1">{breakdown.category}</span>
