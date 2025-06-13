@@ -51,7 +51,9 @@ export function MttrSection({ breakdowns, allMachines }: MttrSectionProps) {
         <Card>
           <CardHeader>
             <CardTitle>MTTR Results</CardTitle>
-            <CardDescription>MTTR is shown in minutes. Lower values are better.</CardDescription>
+            <CardDescription>MTTR is shown in minutes. Lower values are better.MTTR (Mean Time To Repair) is shown in minutes. Lower values are better. 
+              Calculated based on Total time spent on repairs Divided by Number of repairs. 
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ScrollArea className="max-h-[400px]">
