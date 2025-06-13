@@ -1,8 +1,28 @@
+
+"use client";
+
 import type { BreakdownPost } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Clock, Factory, Cog, Wrench, PackageSearch, Info } from "lucide-react";
+import { CalendarDays, Clock, Factory, Cog, Wrench, PackageSearch, Info, Trash2 } from "lucide-react";
 import { format } from 'date-fns';
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { deleteBreakdownPostAction } from "@/lib/actions";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation"; // Corrected import
+import React from "react";
+
 
 interface BreakdownDetailViewProps {
   breakdown: BreakdownPost;
@@ -18,6 +38,41 @@ function getCategoryIcon(category: BreakdownPost['category']) {
 }
 
 export function BreakdownDetailView({ breakdown }: BreakdownDetailViewProps) {
+  const { toast } = useToast();
+  const router = useRouter();
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      // The action now handles redirection internally on success.
+      // We expect it might throw an error for redirection or return a message on failure.
+      await deleteBreakdownPostAction(breakdown.id);
+      // If deleteBreakdownPostAction redirects, this toast might not show, which is fine.
+      // If it returns (e.g., on failure before redirect), the toast will show.
+      toast({
+        title: "Success",
+        description: "Breakdown post deleted successfully. You will be redirected.",
+      });
+      // Explicit router.push might be redundant if action always redirects, but safe fallback.
+      // router.push("/breakdowns"); 
+    } catch (error: any) {
+      // Catching potential redirect errors or other errors from the action
+      if (error.message?.includes('NEXT_REDIRECT')) {
+        // This is a redirect error, Next.js will handle it.
+        throw error;
+      }
+      toast({
+        title: "Error Deleting Breakdown",
+        description: error.message || "Could not delete the breakdown post.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+
   return (
     <Card className="w-full max-w-3xl mx-auto shadow-xl">
       <CardHeader>
@@ -84,8 +139,32 @@ export function BreakdownDetailView({ breakdown }: BreakdownDetailViewProps) {
           </div>
         )}
       </CardContent>
-      <CardFooter className="text-xs text-muted-foreground">
-        Last updated: {format(new Date(breakdown.updatedAt), "PPPp")}
+      <CardFooter className="flex justify-between items-center">
+        <p className="text-xs text-muted-foreground">
+          Last updated: {format(new Date(breakdown.updatedAt), "PPPp")}
+        </p>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" size="sm" disabled={isDeleting}>
+              <Trash2 className="mr-2 h-4 w-4" /> {isDeleting ? "Deleting..." : "Delete Breakdown"}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete this breakdown post
+                and return any consumed spares to the inventory.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                {isDeleting ? "Deleting..." : "Yes, delete it"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardFooter>
     </Card>
   );

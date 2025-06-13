@@ -10,7 +10,7 @@ import { ScrollArea } from '../ui/scroll-area';
 
 interface MttrSectionProps {
   breakdowns: BreakdownPost[];
-  allMachines: string[];
+  allMachines: string[]; // Expects already trimmed and unique machine names
 }
 
 export function MttrSection({ breakdowns, allMachines }: MttrSectionProps) {
@@ -20,7 +20,8 @@ export function MttrSection({ breakdowns, allMachines }: MttrSectionProps) {
     if (selectedMachines.length === 0) return [];
 
     return selectedMachines.map(machineName => {
-      const machineBreakdowns = breakdowns.filter(b => b.machine === machineName);
+      // machineName from selectedMachines is already trimmed
+      const machineBreakdowns = breakdowns.filter(b => b.machine.trim() === machineName);
       if (machineBreakdowns.length === 0) {
         return { machine: machineName, mttr: null, totalLossTime: 0, repairs: 0 };
       }
@@ -28,7 +29,7 @@ export function MttrSection({ breakdowns, allMachines }: MttrSectionProps) {
       const repairs = machineBreakdowns.length;
       const mttr = totalLossTime / repairs;
       return { machine: machineName, mttr, totalLossTime, repairs };
-    }).sort((a,b) => (a.mttr ?? Infinity) - (b.mttr ?? Infinity));
+    }).sort((a,b) => (a.mttr ?? Infinity) - (b.mttr ?? Infinity)); // Lower MTTR is "better" or first
   }, [breakdowns, selectedMachines]);
 
   return (
@@ -80,9 +81,9 @@ export function MttrSection({ breakdowns, allMachines }: MttrSectionProps) {
           </CardContent>
         </Card>
       )}
-       {selectedMachines.length > 0 && mttrData.length === 0 && (
+       {selectedMachines.length > 0 && mttrData.filter(d => d.repairs > 0).length === 0 && (
          <p className="text-muted-foreground text-center py-4">
-          No breakdown data available for the selected machines.
+          No breakdown data available for the selected machines with repairs.
         </p>
        )}
     </div>
