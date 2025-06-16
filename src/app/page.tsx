@@ -10,7 +10,7 @@ export default function HomePage() {
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] py-12">
         <Card className="w-full max-w-2xl shadow-xl">
           <CardHeader className="text-center">
-            <CardTitle className="text-4xl font-headline text-primary">Welcome to Breakdown Tracker</CardTitle>
+            <CardTitle className="text-4xl font-headline text-primary">Welcome to Body PU Maintenance Breakdown Tracker</CardTitle>
             <CardDescription className="text-lg text-muted-foreground pt-2">
               Efficiently manage your equipment breakdowns and spare parts inventory.
             </CardDescription>
