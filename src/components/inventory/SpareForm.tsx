@@ -102,7 +102,7 @@ export function SpareForm({ sparePart, onSuccess }: SpareFormProps) {
             <FormItem>
               <FormLabel>Part Number</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., SP-001" {...field} />
+                <Input placeholder="e.g., 96HTF304081" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -115,7 +115,7 @@ export function SpareForm({ sparePart, onSuccess }: SpareFormProps) {
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea placeholder="e.g., 5HP Electric Motor" {...field} />
+                <Textarea placeholder="e.g., Flow meter" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
