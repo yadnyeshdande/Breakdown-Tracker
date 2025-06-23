@@ -28,7 +28,7 @@ Breakdown Tracker is a web application designed to help businesses and maintenan
     *   [Genkit (Firebase)](https://firebase.google.com/docs/genkit)
 
 ## Getting Started
-
+ Inventory Bug Fix
 ### Prerequisites
 
 *   [Node.js](https://nodejs.org/) (v18 or higher recommended)
